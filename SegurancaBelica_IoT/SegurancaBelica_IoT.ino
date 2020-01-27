@@ -32,6 +32,7 @@ struct Date{
     int horas;
     int minutos;
     int segundos;
+    int dataCompleta;
 };
 
 WiFiUDP udp; //Socket UDP que a lib utiliza para recuperar dados sobre o horário
@@ -47,8 +48,6 @@ MFRC522 mfrc522(SS_PIN, RST_PIN); //Instanciando a classe para leitura do RFID
 //variaveis do sistema
 boolean alarmeAtivado, alarmeAcionado;
 String codigo;
-Date dataAtual;
-
 
 void setup() {
 
@@ -128,6 +127,9 @@ void leituraCartao(void){
    if ( mfrc522.PICC_IsNewCardPresent()){
     
         if ( mfrc522.PICC_ReadCardSerial()){
+          Serial.println();
+          Serial.println("_____________________________________");
+          Serial.println();
 
           for (byte i = 0; i < mfrc522.uid.size; i++) { 
            codigo.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : ""));
@@ -135,34 +137,38 @@ void leituraCartao(void){
            }
            codigo.toUpperCase();
            if(buscaCartao()){
-             if(alarmeAtivado){
-              if(alarmeAcionado){
-                alarmeAcionado = false;
-                montaJsonDisparo(formataData());
-                enviaDisparoFirebase();              
-              }else{
-                buzzerDesativacao();
-                alarmeAtivado = false;
-                montaJsonAcesso(formataData());
-                enviaAcessoFirebase();
-              }
-             }else{
-              buzzerAtivacao();
-              alarmeAtivado = true;
-              montaJsonAcesso(formataData());
-              enviaAcessoFirebase();
-             }
+               if(alarmeAtivado){
+                  if(alarmeAcionado){
+                       Serial.println("Alarme Reativado");
+                       acionaBuzzer(1);
+                       alarmeAcionado = false;
+                       montaJsonDisparo(formataData());
+                       enviaDisparoFirebase();              
+                  }else{
+                       Serial.println("Alarme Desativado");
+                       acionaBuzzer(2);
+                       alarmeAtivado = false;
+                       montaJsonAcesso(formataData());
+                       enviaAcessoFirebase();
+                  }
+               }else{
+                    Serial.println("Alarme Ativado");
+                    acionaBuzzer(1);
+                    alarmeAtivado = true;
+                    alarmeAcionado = false;
+                    montaJsonAcesso(formataData());
+                    enviaAcessoFirebase();
+               }
             
            }else{
-             buzzerInvalida();
-             Serial.print("TAG inválida: ");
-             Serial.println(codigo);
+                Serial.println("Cartão inválido");
+                acionaBuzzer(3);             
            }
-           Serial.println("Dados da Tag RFID:");
+           Serial.println("Dados do Cartão RFID:");
            mfrc522.PICC_DumpDetailsToSerial(&(mfrc522.uid));
            mfrc522.PICC_HaltA();
         }
-  }  
+    }  
 }
 
 void leituraSensorPIR(void){
@@ -174,8 +180,13 @@ void leituraSensorPIR(void){
        Serial.println("Movimento Detectado");
        montaJsonDisparo(formataData());
        enviaDisparoFirebase();
+       enviaNotificacao();
     }
   }
+}
+
+void enviaNotificacao(void){
+  
 }
 
 void enviaDisparoFirebase(void){
@@ -194,26 +205,25 @@ void enviaAcessoFirebase(void){
   }  
 }
 
-int formataData(void){
-  dataAtual = getDate();
-  int dataCompleta;  
-  dataCompleta = dataAtual.ano*100;
-  dataCompleta = dataCompleta + dataAtual.mes;
-  dataCompleta = dataCompleta*100;
-  dataCompleta = dataCompleta + dataAtual.dia; 
-  return dataCompleta; 
+Date formataData(void){
+  Date dataAtual = getDate();   
+  dataAtual.dataCompleta = dataAtual.ano*100;
+  dataAtual.dataCompleta = dataAtual.dataCompleta + dataAtual.mes;
+  dataAtual.dataCompleta = dataAtual.dataCompleta*100;
+  dataAtual.dataCompleta = dataAtual.dataCompleta + dataAtual.dia; 
+  return dataAtual; 
 }
 
-void montaJsonDisparo(int dataCompleta){
-  jsonDisparo.set("data",dataCompleta);
+void montaJsonDisparo(Date dataAtual){
+  jsonDisparo.set("data",dataAtual.dataCompleta);
   jsonDisparo.set("hora",dataAtual.horas);
   jsonDisparo.set("min",dataAtual.minutos);
   jsonDisparo.set("seg",dataAtual.segundos);
   jsonDisparo.set("alarme",alarmeAcionado);
 }
 
-void montaJsonAcesso(int dataCompleta){
-  jsonAcesso.set("data",dataCompleta);
+void montaJsonAcesso(Date dataAtual){
+  jsonAcesso.set("data",dataAtual.dataCompleta);
   jsonAcesso.set("hora",dataAtual.horas);
   jsonAcesso.set("min",dataAtual.minutos);
   jsonAcesso.set("seg",dataAtual.segundos);
@@ -221,33 +231,13 @@ void montaJsonAcesso(int dataCompleta){
   jsonAcesso.set("codigoCartao",codigo);
 }
 
-void buzzerAtivacao(void){
+void acionaBuzzer(int t){
+  for(int i = 1; i<=t ;i++){
     digitalWrite(PIN_BUZZER,HIGH);
-    delay(100);
+    delay(70);
     digitalWrite(PIN_BUZZER,LOW);
-}
-
-void buzzerDesativacao(void){
-    digitalWrite(PIN_BUZZER,HIGH);
-    delay(100);
-    digitalWrite(PIN_BUZZER,LOW);
-    delay(100);
-    digitalWrite(PIN_BUZZER,HIGH);
-    delay(100);
-    digitalWrite(PIN_BUZZER,LOW);
-}
-void buzzerInvalida(void){
-    digitalWrite(PIN_BUZZER,HIGH);
-    delay(100);
-    digitalWrite(PIN_BUZZER,LOW);
-    delay(100);
-    digitalWrite(PIN_BUZZER,HIGH);
-    delay(100);
-    digitalWrite(PIN_BUZZER,LOW);
-    delay(100);
-    digitalWrite(PIN_BUZZER,HIGH);
-    delay(100);
-    digitalWrite(PIN_BUZZER,LOW);
+    delay(70);
+  }
 }
 
 
