@@ -11,6 +11,8 @@
 
 #define FIREBASE_HOST "https://segdepositobelico.firebaseio.com"
 #define FIREBASE_AUTH "iGVRVXuQuFSPckJ3n7aaFrQszTS8vPmV081ZSosl"
+#define FIREBASE_FCM_SERVER_KEY "AAAA9NpwjjU:APA91bFlVliyNhEw8sGs--uafV1yCuVBuJcBL_BJjbqmHWvzMt3P_gfgA4b_ovDGpAJOcYOXbQw5g7XyQXDlSvSURODGx04z04E57HPSGOtDNor30sjPBMXoNs6TJIXSYU7_av5J3K81"
+
 #define WIFI_SSID "A3-128GB"
 #define WIFI_PASSWORD "canismajoris"
 #define PIN_SENSOR_PIR 36
@@ -57,8 +59,12 @@ void setup() {
 
   pinMode(PIN_SENSOR_PIR, INPUT);
   pinMode(PIN_BUZZER, OUTPUT);
-  
+
+  //configuração acesso ao db firebase
   Firebase.begin (FIREBASE_HOST, FIREBASE_AUTH);
+  //configuração do fireBaseMenssaging
+  firebaseData.fcm.begin(FIREBASE_FCM_SERVER_KEY);
+
   Firebase.reconnectWiFi(true);
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -186,7 +192,17 @@ void leituraSensorPIR(void){
 }
 
 void enviaNotificacao(void){
-  
+  firebaseData.fcm.setPriority("high");
+  firebaseData.fcm.setTimeToLive(1000000); //tempo de vida de aproximadamente 11 dias
+  firebaseData.fcm.setTopic("DisparoAlarme");
+  firebaseData.fcm.setNotifyMessage("Alarme Disparado", "Atenção, o alarme da reserva disparou!");
+  if (Firebase.sendTopic(firebaseData)){
+    //Success, print the result returned from server
+    Serial.println(firebaseData.fcm.getSendResult());
+  }else{
+    //Failed, print the error reason
+    Serial.println(firebaseData.errorReason());
+  }
 }
 
 void enviaDisparoFirebase(void){
