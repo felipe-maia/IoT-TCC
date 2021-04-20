@@ -1,5 +1,5 @@
 # IoT-TCC
-Este projeto foi desenvolvido para o TCC da Pós-Graduação em Dispositivos Móveis e Internet das Coisas UTFPR 2019/2020. TCC Segurança e Controle do Armamento nas Corporações Militares Através da Tecnologia Móvel e Internet das Coisas
+Software para o microcontrolador IoT do projeto para o TCC da Pós-Graduação em Dispositivos Móveis e Internet das Coisas UTFPR 2019/2020. TCC Segurança e Controle do Armamento nas Corporações Militares Através da Tecnologia Móvel e Internet das Coisas
 
 Sobre o projeto
 
